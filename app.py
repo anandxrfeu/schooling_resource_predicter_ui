@@ -31,7 +31,7 @@ fake_funding = pd.DataFrame({
 ########################################################################
 
 ########################### Sidebar
-municipality = st.sidebar.selectbox("Choose a municipality", ("Cerejeiras - Rondônia", "Terezinha - Bahia", "Prata - Minas Gerais"))
+municipality = st.sidebar.selectbox("**Choose a municipality**", ("Cerejeiras - Rondônia", "Terezinha - Bahia", "Prata - Minas Gerais"))
 
 st.sidebar.markdown(
     "Predict education funding needs at a municipality level in Brazil. The underlyding model uses highschool data. "
@@ -40,10 +40,7 @@ st.sidebar.markdown(
 
 st.sidebar.markdown(
     """
-Prediction parameters:
-
-    - Year
-    - Student passing %
+**Prediction parameters:**
 """
 )
 
@@ -54,9 +51,22 @@ passing_grade = st.sidebar.slider(
     "Passing %", min_value=80, max_value=99, value=85, step=5
 )
 
+st.sidebar.markdown(
+    f"""
+**Other parameters (circa 2020):**
+
+    - Student falling rate 16%
+    - Student dropour rate 2%
+    - Number of schools 234
+    - Number of teahers 2344
+    - Population 2340944
+    - GDP per capita R$ 17,234
+    - Internet access 75.83%
+"""
+)
+
 ########################### Main panel
 
 st.title(f"Funding Needs for {municipality.replace(' -', ',')}")
-
 
 st.bar_chart(fake_funding, x="Year")
