@@ -172,7 +172,7 @@ if not funding_data.empty:
     color_mapping = {
 #        'Actual': 'rgb(240, 242, 246)',
         'Actual': 'darkgray',
-        'Predicted': 'rgb(255, 75, 75)'
+        'Predicted': 'rgb(75,126,255)'
     }
 
     # Create a Plotly bar chart
