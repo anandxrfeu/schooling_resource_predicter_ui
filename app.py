@@ -170,7 +170,8 @@ if not funding_data.empty:
 
      # Color mapping for 'Status'
     color_mapping = {
-        'Actual': 'blue',
+#        'Actual': 'rgb(240, 242, 246)',
+        'Actual': 'darkgray',
         'Predicted': 'rgb(255, 75, 75)'
     }
 
