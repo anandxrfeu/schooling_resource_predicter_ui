@@ -1,4 +1,4 @@
-from dotenv import load_dotenv
+#from dotenv import load_dotenv
 
 import os
 
@@ -10,7 +10,7 @@ import plotly.express as px
 import requests
 
 # Load .env file
-load_dotenv()
+#load_dotenv()
 
 
 
