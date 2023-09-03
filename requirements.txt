@@ -1,6 +1,6 @@
 streamlit
 requests
 pandas
-numpy
 python-dotenv
 plotly
+streamlit_searchbox

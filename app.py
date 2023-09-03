@@ -3,35 +3,69 @@ from dotenv import load_dotenv
 import os
 
 import pandas as pd
-import numpy as np
-
 import streamlit as st
 import plotly.express as px
 import requests
+from typing import List, Optional
+
+from streamlit_searchbox import st_searchbox
+
+st.set_page_config(layout="wide", page_title="Education Resource Predictor")
 
 # Load .env file
 load_dotenv()
 
+folder_path = "/raw_data/"
+file_name = "municipality_lookup.csv"
+file_path = os.path.join(os.getcwd()+folder_path, file_name)
+municipalities = pd.read_csv(file_path)
+
+# Function to search for municipalities and return them in the specified format
+def search_municipality(query: str, dataframe: pd.DataFrame) -> List[str]:
+    # Case-insensitive search for the query in the 'Município' column
+    filtered_df = dataframe[dataframe['Município'].str.contains(query, case=False)]
+
+    # Create a list of string representation of "Município, Estado"
+    results = [f"{row['Município']}, {row['Estado']}" for _, row in filtered_df.iterrows()]
+
+    return results
 
 
+# Function to lookup Código_IBGE based on "Município, Estado"
+def lookup_codigo_ibge(municipio_estado: str, dataframe: pd.DataFrame) -> Optional[int]:
+    # Split the input string into Municipio and Estado
+    municipio, estado = municipio_estado.split(", ")
 
-st.set_page_config(layout="wide", page_title="Education Resource Predictor")
+    # Filter the DataFrame to find the matching row
+    filtered_df = dataframe[(dataframe['Município'] == municipio) & (dataframe['Estado'] == estado)]
+
+    # If a match is found, return the Código_IBGE, otherwise return None
+    if not filtered_df.empty:
+        return int(filtered_df.iloc[0]['Código_IBGE'])
+    else:
+        return None
+
+
+# function with list of labels
+def lookup_municipalities(searchterm: str) -> List[any]:
+    return search_municipality(searchterm, municipalities) if searchterm else []
+
 
 # Function to format numbers to "Millions"
 def format_to_millions(number):
     return round((number / 1_000_000), 2)
 
-def get_prediction_data(ibge_code, year=2023, passing_rate=99, localization='Urbana'):
+def get_prediction_data(ibge_code, localization, year=2023, passing_rate=90):
 
     params = {
         "year" : year,
         "passing_rate": passing_rate,
         "localization": localization
     }
-    #ibge_code = 1100015
-    response = requests.get(f'{os.environ.get("API_URL")}{ibge_code}', params=params)
 
     try:
+        #ibge_code = 1100015
+        response = requests.get(f'{os.environ.get("API_URL")}{ibge_code}', params=params)
         if response.status_code == 200:
             resonse_data = response.json()
             funding_df = pd.DataFrame(resonse_data.pop("Historic_funding"))
@@ -40,8 +74,9 @@ def get_prediction_data(ibge_code, year=2023, passing_rate=99, localization='Urb
             funding_df['Status'] = ['Actual' if year < 2023 else 'Predicted' for year in funding_df['Year']]
             municipality_data = resonse_data
             return municipality_data, funding_df
+        elif response.status_code == 404:
+            return {}, pd.DataFrame()
     except Exception as e:
-        print(e)
         return {}, pd.DataFrame()
 
 def center_and_bold_text(text):
@@ -53,6 +88,22 @@ def center_text(text):
 def left_justify(text):
     return f"<div style='padding: 15px; line-height:0px;'>{text}</div>"
 
+
+st.title("Funding Predictor")
+# pass search function to searchbox
+city_state = st_searchbox(
+    lookup_municipalities,
+    key="municipality_searchbox",
+    placeholder="Curitiba, Paraná",
+    default="Curitiba, Paraná"
+)
+
+ibge=4106902
+
+if city_state:
+    ibge = lookup_codigo_ibge(city_state, municipalities)
+
+
 ########################################################################
 # UI
 ########################################################################
@@ -60,7 +111,7 @@ def left_justify(text):
 ########################### Sidebar
 
 #[1100015, 3151602, 4127601]
-municipality = st.sidebar.selectbox("**Choose a municipality:**",(1100015, 3151602, 4127601))
+#ibge_code = st.sidebar.selectbox("**Choose a municipality:**",(1100015, 3151602, 4127601))
 
 st.sidebar.markdown(
     """
@@ -77,41 +128,30 @@ passing_rate = st.sidebar.slider(
 
 localization  = st.sidebar.radio(
     "Localization",
-    ["Urban", "Rural"], horizontal=True)
+    ["Urbana", "Rural"], horizontal=True)
 
 
-municipality_data, funding_data = get_prediction_data(municipality, year)
+municipality_data, funding_data = get_prediction_data(ibge, localization, year,passing_rate)
 
-# st.sidebar.markdown(
-#     f"""
-# **Other parameters (circa 2020):**
-
-#     Population {municipality_data["Adjusted_population"]}
-#     GDP per capita R${municipality_data["PIB"]}
-#     Poverty {municipality_data["Poverty_%"]}%
-#     Malnutrition {municipality_data["Magreza_total_%"]}%
-#     Internet Access {municipality_data["Acesso_a_internet_%"]}%
-# """
-# )
-
-st.sidebar.markdown(f"""**Other parameters (circa 2020):**""", unsafe_allow_html=True)
-st.sidebar.markdown(left_justify(f"""Population {municipality_data["Adjusted_population"]}"""), unsafe_allow_html=True)
-st.sidebar.markdown(left_justify(f"""GDP per capita R$ {municipality_data["PIB"]}"""), unsafe_allow_html=True)
-st.sidebar.markdown(left_justify(f"""Poverty{municipality_data["Poverty_%"]}%"""), unsafe_allow_html=True)
-st.sidebar.markdown(left_justify(f"""Malnutrition {municipality_data["Magreza_total_%"]}%"""), unsafe_allow_html=True)
-st.sidebar.markdown(left_justify(f"""Internet Access {municipality_data["Acesso_a_internet_%"]}%"""), unsafe_allow_html=True)
-
+if municipality_data:
+    st.sidebar.markdown(f"""**Other parameters (circa 2020):**""", unsafe_allow_html=True)
+    st.sidebar.markdown(left_justify(f"""Population {municipality_data["Adjusted_population"]}"""), unsafe_allow_html=True)
+    st.sidebar.markdown(left_justify(f"""GDP per capita R$ {municipality_data["PIB"]}"""), unsafe_allow_html=True)
+    st.sidebar.markdown(left_justify(f"""Poverty{municipality_data["Poverty_%"]}%"""), unsafe_allow_html=True)
+    st.sidebar.markdown(left_justify(f"""Malnutrition {municipality_data["Magreza_total_%"]}%"""), unsafe_allow_html=True)
+    st.sidebar.markdown(left_justify(f"""Internet Access {municipality_data["Acesso_a_internet_%"]}%"""), unsafe_allow_html=True)
 
 ########################### Main panel
-
-st.title(f"Funding needs for {municipality}")
+# if ibge:
+#     st.markdown(f"{city_state}")
 st.markdown("<br>", unsafe_allow_html=True)
 
 
-student_teacher_ratio = round(int(municipality_data["Matrículas"]) / int(municipality_data["Docentes"]),2)
+
 
 
 if municipality_data:
+    student_teacher_ratio = round(int(municipality_data["Matrículas"]) / int(municipality_data["Docentes"]),2)
     # Create layout
     col1, col2, col3, col4 = st.columns(4)
     with col1:
@@ -162,7 +202,7 @@ if municipality_data:
     #st.divider()
 
 else:
-    print("municipality_data Not Available..")
+    st.error(f"Data unavailable for localization {localization} for {city_state} at this moment.")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -196,5 +236,3 @@ if not funding_data.empty:
     )
     # Display the Plotly chart using Streamlit
     st.plotly_chart(fig, use_container_width=True)  # Set to full width
-else:
-    print("Funding Not Available..")
