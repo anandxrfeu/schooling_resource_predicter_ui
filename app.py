@@ -167,11 +167,19 @@ else:
 st.markdown("<br>", unsafe_allow_html=True)
 
 if not funding_data.empty:
+
+     # Color mapping for 'Status'
+    color_mapping = {
+        'Actual': 'blue',
+        'Predicted': 'rgb(255, 75, 75)'
+    }
+
     # Create a Plotly bar chart
     fig = px.bar(funding_data, x='Year', y='Funding (R$)', color='Status',
                 labels={'Funding (R$)': 'Funding in Million (R$)', 'Year': 'Year'},
                 title='Yearly Funding',
-                text='Funding (R$)')
+                text='Funding (R$)',
+                color_discrete_map=color_mapping)  # Custom color mapping
 
     # Customize the layout
     fig.update_layout(
