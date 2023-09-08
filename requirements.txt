@@ -4,3 +4,7 @@ pandas
 python-dotenv
 plotly
 streamlit_searchbox
+streamlit-folium
+matplotlib
+seaborn
+folium
